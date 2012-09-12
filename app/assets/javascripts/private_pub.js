@@ -39,7 +39,8 @@ function buildPrivatePub(doc) {
           message.ext.private_pub_signature = subscription.signature;
           message.ext.private_pub_timestamp = subscription.timestamp;
         }
-        message.ext.user = message.subscription.user;
+        console.log(message);
+        console.log(self.subscriptions);
         callback(message);
       }
     },
