@@ -32,13 +32,14 @@ function buildPrivatePub(doc) {
 
     fayeExtension: {
       outgoing: function(message, callback) {
+        if (!message.ext) message.ext = {};
         if (message.channel == "/meta/subscribe") {
           // Attach the signature and timestamp to subscription messages
           var subscription = self.subscriptions[message.subscription];
-          if (!message.ext) message.ext = {};
           message.ext.private_pub_signature = subscription.signature;
           message.ext.private_pub_timestamp = subscription.timestamp;
         }
+        message.ext.user = subscription.user;
         callback(message);
       }
     },
