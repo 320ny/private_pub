@@ -7,8 +7,15 @@ module PrivatePub
     def incoming(message, callback)
       if message["channel"] == "/meta/subscribe"
         authenticate_subscribe(message)
+        unless message["error"]
+          StorySession.subscribe_event(message["channel"], :channel => message["subscription"], :meta => {:user_id => message["ext"]["user"]["id"], :session => message["subscription"][1]})
+        end
       elsif message["channel"] !~ %r{^/meta/}
         authenticate_publish(message)
+      elsif message["channel"] == "/meta/unsubscribe"
+        unless message["error"]
+          StorySession.subscribe_event(message["channel"], :channel => message["subscription"], :meta => {:user_id => message["ext"]["user"]["id"], :session => message["subscription"][1..-1]})
+        end
       end
       callback.call(message)
     end
@@ -17,7 +24,7 @@ module PrivatePub
 
     # Ensure the subscription signature is correct and that it has not expired.
     def authenticate_subscribe(message)
-      subscription = PrivatePub.subscription(:channel => message["subscription"], :timestamp => message["ext"]["private_pub_timestamp"])
+      subscription = PrivatePub.subscription(:channel => message["subscription"], :timestamp => message["ext"]["private_pub_timestamp"], :user => message["ext"]["user"])
       if message["ext"]["private_pub_signature"] != subscription[:signature]
         message["error"] = "Incorrect signature."
       elsif PrivatePub.signature_expired? message["ext"]["private_pub_timestamp"].to_i

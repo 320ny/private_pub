@@ -4,6 +4,7 @@ function buildPrivatePub(doc) {
     fayeClient: null,
     fayeCallbacks: [],
     subscriptions: {},
+    subscriptionObjects: {},
     subscriptionCallbacks: {},
 
     faye: function(callback) {
@@ -32,15 +33,19 @@ function buildPrivatePub(doc) {
 
     fayeExtension: {
       outgoing: function(message, callback) {
-        if (!message.ext) message.ext = {};
         if (message.channel == "/meta/subscribe") {
           // Attach the signature and timestamp to subscription messages
           var subscription = self.subscriptions[message.subscription];
+          if (!message.ext) message.ext = {};
           message.ext.private_pub_signature = subscription.signature;
           message.ext.private_pub_timestamp = subscription.timestamp;
+          message.ext.user = subscription.user;
         }
-        console.log(message);
-        console.log(self.subscriptions);
+        else if (message.channel == "/meta/unsubscribe") {
+          var subscription = self.subscriptions[message.subscription];
+          if (!message.ext) message.ext = {};
+          message.ext.user = subscription.user
+        }
         callback(message);
       }
     },
@@ -51,7 +56,11 @@ function buildPrivatePub(doc) {
       }
       self.subscriptions[options.channel] = options;
       self.faye(function(faye) {
-        faye.subscribe(options.channel, self.handleResponse);
+        var sub = faye.subscribe(options.channel, self.handleResponse);
+        self.subscriptionObjects[options.channel] = sub;
+        if (options.subscription) {
+          options.subscription(sub);
+        }
       });
     },
 
@@ -64,9 +73,29 @@ function buildPrivatePub(doc) {
       }
     },
 
+    subscription: function(channel) {
+      return self.subscriptionObjects[channel];
+    },
+
+    unsubscribeAll: function() {
+      for (var i in self.subscriptionObjects) {
+        if (self.subscriptionObjects.hasOwnProperty(i) ){
+          self.subscriptionObjects[i].cancel();
+        }
+      }
+    },
+
+    unsubscribe: function(channel) {
+      var sub = self.subscription(channel);
+      if (sub) {
+        sub.cancel();
+      }
+    },
+
     subscribe: function(channel, callback) {
       self.subscriptionCallbacks[channel] = callback;
     }
+
   };
   return self;
 }
