@@ -8,6 +8,7 @@ module PrivatePub
       if message["channel"] == "/meta/subscribe"
         authenticate_subscribe(message)
         unless message["error"]
+          puts message
           StorySession.subscribe_event(message["channel"], :channel => message["subscription"], :meta => {:user_id => message["ext"]["user"]["id"], :session => message["subscription"][1]})
         end
       elsif message["channel"] !~ %r{^/meta/}
